@@ -113,7 +113,10 @@ const today=()=>iso(new Date());
 function setStatus(t,e=false){$("status").textContent=t;$("status").classList.toggle("error",e);$("status").classList.remove("hidden")}
 function hideStatus(){$("status").classList.add("hidden")}
 async function ensureAuth(){const {data:{session}}=await db.auth.getSession();if(session)return;const {error}=await db.auth.signInAnonymously();if(error)throw new Error("匿名登录失败：请先在 Supabase Authentication 中开启 Anonymous Sign-Ins")}
-async function joinGroup(){const q=new URLSearchParams(location.search);state.groupCode=(q.get("g")||localStorage.getItem("climb_group_code")||"").trim();if(!state.groupCode)throw new Error("请通过好友邀请链接打开这个日历。URL 需要包含 ?g=邀请码");const {data,error}=await db.rpc("climb_join_group",{p_share_code:state.groupCode});if(error)throw error;state.groupId=data;localStorage.setItem("climb_group_code",state.groupCode)}
+const groupCodeKey="climb_group_code";
+const savedGroupCode=()=>{const cookie=document.cookie.split("; ").find(x=>x.startsWith(`${groupCodeKey}=`));return(localStorage.getItem(groupCodeKey)||(cookie?decodeURIComponent(cookie.slice(groupCodeKey.length+1)):"")||"").trim()};
+function saveGroupCode(code){localStorage.setItem(groupCodeKey,code);document.cookie=`${groupCodeKey}=${encodeURIComponent(code)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`}
+async function joinGroup(){const q=new URLSearchParams(location.search);state.groupCode=(q.get("g")||savedGroupCode()).trim();if(!state.groupCode)throw new Error("首次使用请通过好友邀请链接打开这个日历。之后会自动记住，无需再次输入邀请码。");const {data,error}=await db.rpc("climb_join_group",{p_share_code:state.groupCode});if(error)throw error;state.groupId=data;saveGroupCode(state.groupCode)}
 async function loadAll(){
  const [{data:m,error:me},{data:g,error:ge},{data:s,error:se}]=await Promise.all([
   db.from("climb_members").select("*").eq("group_id",state.groupId).order("sort_order").order("created_at"),

@@ -3,7 +3,6 @@
   "short_name": "登る？",
   "description": "好友共享攀岩日历",
   "lang": "zh-CN",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f5f2",
