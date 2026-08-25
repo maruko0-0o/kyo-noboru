@@ -1,4 +1,4 @@
-const CACHE_NAME="kyo-noboru-v3";
+const CACHE_NAME="kyo-noboru-v4";
 const APP_SHELL=["./","./index.html","./manifest.webmanifest","./icon.svg","./icon-180.png","./icon-192.png","./icon-512.png"];
 
 self.addEventListener("install",event=>{
@@ -7,6 +7,10 @@ self.addEventListener("install",event=>{
 
 self.addEventListener("activate",event=>{
   event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+});
+
+self.addEventListener("message",event=>{
+  if(event.data?.type==="SKIP_WAITING")self.skipWaiting();
 });
 
 self.addEventListener("fetch",event=>{
