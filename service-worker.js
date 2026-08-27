@@ -1,5 +1,5 @@
-const CACHE_NAME="kyo-noboru-v12";
-const APP_SHELL=["./","./index.html","./manifest.webmanifest","./icon.svg","./icon-180.png","./icon-192.png","./icon-512.png","./climbing-mascot-actions-transparent.png","./effort-gym-warm.png","./effort-gym-routes.png","./effort-gym-sage.png"];
+const CACHE_NAME="kyo-noboru-v13";
+const APP_SHELL=["./","./index.html","./manifest.webmanifest","./icon.svg","./icon-180.png","./icon-192.png","./icon-512.png","./climbing-mascot-actions-cutout-v2.png","./effort-gym-warm.png","./effort-gym-routes.png","./effort-gym-sage.png"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
