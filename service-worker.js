@@ -1,4 +1,4 @@
-const CACHE_NAME="kyo-noboru-v13";
+const CACHE_NAME="kyo-noboru-v14";
 const APP_SHELL=["./","./index.html","./manifest.webmanifest","./icon.svg","./icon-180.png","./icon-192.png","./icon-512.png","./climbing-mascot-actions-cutout-v2.png","./effort-gym-warm.png","./effort-gym-routes.png","./effort-gym-sage.png"];
 
 self.addEventListener("install",event=>{
