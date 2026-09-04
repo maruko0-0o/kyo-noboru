@@ -1,0 +1,3 @@
+supabase/functions/.env
+supabase/.env.local
+push-notification-secrets.env

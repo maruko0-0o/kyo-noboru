@@ -1,0 +1,5 @@
+[functions.push-notifications]
+# Database triggers call this function without a user JWT. The function
+# verifies the webhook secret itself, and verifies user JWTs for subscribe
+# and unsubscribe requests.
+verify_jwt = false
