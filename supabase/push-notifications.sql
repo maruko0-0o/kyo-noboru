@@ -1,6 +1,6 @@
 -- PWA push notification storage and delivery trigger.
 -- Run this once in Supabase Dashboard → SQL Editor after deploying
--- `push-notifications` and setting the two database settings shown in
+-- `push-notifications` and creating the Vault secret described in
 -- SUPABASE_PUSH_SETUP.md.
 
 create table if not exists public.climb_push_subscriptions (
@@ -24,6 +24,10 @@ alter table public.climb_push_subscriptions enable row level security;
 create index if not exists climb_push_subscriptions_group_id_idx
   on public.climb_push_subscriptions (group_id);
 
+-- pg_net sends the request asynchronously after the current transaction
+-- commits, so notification delivery can never prevent a calendar change.
+create extension if not exists pg_net;
+
 create or replace function public.climb_send_session_push()
 returns trigger
 language plpgsql
@@ -31,35 +35,40 @@ security definer
 set search_path = public, extensions
 as $$
 declare
-  endpoint_url text := current_setting('app.climb_push_function_url', true);
-  webhook_secret text := current_setting('app.climb_push_webhook_secret', true);
+  endpoint_url constant text := 'https://mtbrvujoandyhrkeplio.supabase.co/functions/v1/push-notifications';
+  webhook_secret text;
   payload jsonb;
 begin
-  -- Leaving these settings empty makes this trigger a safe no-op until the
-  -- Edge Function is deployed and configured.
-  if endpoint_url is null or endpoint_url = '' or webhook_secret is null or webhook_secret = '' then
-    if tg_op = 'DELETE' then return old; else return new; end if;
+  select decrypted_secret
+    into webhook_secret
+    from vault.decrypted_secrets
+   where name = 'climb_push_webhook_20260915'
+   limit 1;
+
+  if coalesce(webhook_secret, '') <> '' then
+    payload := jsonb_build_object(
+      'action', 'dispatch',
+      'event_type', tg_op,
+      'table_name', tg_table_name,
+      'record', case when tg_op = 'DELETE' then null else to_jsonb(new) end,
+      'old_record', case when tg_op = 'INSERT' then null else to_jsonb(old) end
+    );
+
+    perform net.http_post(
+      url := endpoint_url,
+      body := payload,
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-climb-push-secret', webhook_secret
+      ),
+      timeout_milliseconds := 1000
+    );
   end if;
 
-  payload := jsonb_build_object(
-    'action', 'dispatch',
-    'event_type', tg_op,
-    'table_name', tg_table_name,
-    'record', case when tg_op = 'DELETE' then null else to_jsonb(new) end,
-    'old_record', case when tg_op = 'INSERT' then null else to_jsonb(old) end
-  );
-
-  perform supabase_functions.http_request(
-    endpoint_url,
-    'POST',
-    jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-climb-push-secret', webhook_secret
-    ),
-    payload,
-    '1000'
-  );
-
+  if tg_op = 'DELETE' then return old; else return new; end if;
+exception when others then
+  -- A notification outage must never block a member from saving a session.
+  raise warning 'Skipping climb push dispatch: %', sqlerrm;
   if tg_op = 'DELETE' then return old; else return new; end if;
 end;
 $$;

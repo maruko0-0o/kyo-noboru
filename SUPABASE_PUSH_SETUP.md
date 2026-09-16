@@ -10,16 +10,17 @@
    - `PUSH_WEBHOOK_SECRET`
 3. 部署 [supabase/functions/push-notifications/index.ts](supabase/functions/push-notifications/index.ts) 为名为 `push-notifications` 的 Edge Function，并确认 [supabase/config.toml](supabase/config.toml) 中该函数的 `verify_jwt = false` 一并生效。部署后，它的地址是：
    `https://mtbrvujoandyhrkeplio.supabase.co/functions/v1/push-notifications`
-4. 在 Dashboard 的 SQL Editor 执行 [supabase/push-notifications.sql](supabase/push-notifications.sql)。
-5. 仍在 SQL Editor，填入第 1 步生成的 `PUSH_WEBHOOK_SECRET` 并执行：
+4. 在 Dashboard 的 SQL Editor，填入第 1 步生成的 `PUSH_WEBHOOK_SECRET` 并执行一次，将它安全保存到 Vault：
 
    ```sql
-   alter database postgres set app.climb_push_function_url =
-     'https://mtbrvujoandyhrkeplio.supabase.co/functions/v1/push-notifications';
-   alter database postgres set app.climb_push_webhook_secret = '替换成第 1 步生成的密钥';
-   select pg_reload_conf();
+   select vault.create_secret(
+     '替换成第 1 步生成的密钥',
+     'climb_push_webhook_20260915',
+     'Kyo Noboru database-to-function webhook credential'
+   );
    ```
 
+5. 执行 [supabase/push-notifications.sql](supabase/push-notifications.sql)。脚本会启用 `pg_net`，让通知在行程保存成功后异步发送；通知链路异常时不会阻塞行程保存。
 6. 在 iPhone 上请先用 Safari 将日历“添加到主屏幕”，从桌面打开后点“开启提醒”。每位岩友需要各自授权一次。
 
 部署后，新增、编辑、取消行程会由数据库触发 Edge Function，再发送 Web Push。通知点击后会回到日历。
